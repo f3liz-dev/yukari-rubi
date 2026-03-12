@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "oxc.oxc-vscode",
+    "dbaeumer.vscode-eslint",
+    "usernamehw.errorlens",
+    "jacobcassidy.css-nesting-syntax-highlighting"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "ts-template-functional",
+  "version": "0.0.1",
+  "description": "",
+  "license": "CC0-1.0",
+  "author": "",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "neverthrow": "^8.2.0",
+    "remeda": "^2.33.6",
+    "valibot": "^1.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.0.2",
+    "eslint-plugin-functional": "^9.0.4",
+    "eslint-plugin-oxlint": "^1.51.0",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "oxlint-tsgolint": "^0.16.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    // ── Module ───────────────────────────────────
+    "target": "es2022",
+    "lib": ["es2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler", // Cloudflare Workers uses bundler (wrangler)
+    "moduleDetection": "force", // every file is a module, no global scope leaks
+    "verbatimModuleSyntax": true, // forces `import type`, cleaner tree-shaking
+
+    // ── Emit ─────────────────────────────────────
+    "noEmit": true, // wrangler handles emit, not tsc
+    "isolatedModules": true, // each file transformable independently (esbuild compat)
+
+    // ── Resolution ───────────────────────────────
+    "resolveJsonModule": true,
+    "skipLibCheck": true, // don't check node_modules types, save time
+
+    // ── Strictness core ──────────────────────────
+    "strict": true, // enables: noImplicitAny, strictNullChecks, etc.
+    "noUncheckedIndexedAccess": true, // arr[0] is T | undefined, not T
+
+    // ── Strictness extra (comfortable, not noisy) ─
+    "exactOptionalPropertyTypes": true, // `?` means absent, not `| undefined`
+    "noImplicitReturns": true, // every branch must return
+    "noFallthroughCasesInSwitch": true, // switch cases must break/return
+    "noUnusedLocals": true, // catch dead variables
+    "noUnusedParameters": true, // catch dead parameters
+
+    // ── FP friendly ──────────────────────────────
+    "noImplicitOverride": true, // low cost, class safety (even if you avoid classes)
+    "allowUnreachableCode": false, // dead code after return/throw is an error
+    "allowUnusedLabels": false // no dangling labels
+  },
+  "include": ["src/**/*", "worker-configuration.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}
