@@ -6,6 +6,7 @@
   "author": "f3liz-dev",
   "type": "module",
   "scripts": {
+    "fetch-dict": "./fetch_dictionary.sh",
     "build": "node scripts/build.mjs",
     "dev": "npm run build && npx web-ext run --config web-ext.config.mjs",
     "lint": "oxlint",
