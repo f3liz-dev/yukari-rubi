@@ -1,0 +1,35 @@
+[package]
+name = "sudachi-wasm"
+version = "0.6.11-a1"
+authors = ["f3liz-dev <f3liz-dev@proton.me>"]
+edition = "2021"
+description = "WebAssembly bindings for Sudachi Japanese morphological analyzer"
+repository = "https://github.com/f3liz-dev/sudachi-wasm"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "dic_converter"
+path = "src/bin/dic_converter.rs"
+
+[[bin]]
+name = "kkc_builder"
+path = "src/bin/kkc_builder.rs"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[dependencies]
+#features=["marisa-trie"]
+sudachi = { path = "./sudachi.rs/sudachi", default-features = false, features = [] }
+rsmarisa = { path = "./sudachi.rs/rsmarisa", default-features = false, features = ["wasm"] }
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+zstd = { version = "0.13", features = ["zdict_builder"] }
+

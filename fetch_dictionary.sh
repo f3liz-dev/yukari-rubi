@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 DICT_VERSION=${1:-"latest"}
 DICT_TYPE=${2:-"core"}
@@ -12,12 +13,16 @@ curl -L \
     https://d2ej7fkh96fzlu.cloudfront.net/sudachidict/${DICT_NAME}.zip \
     > ${DICT_NAME}.zip
 
-unzip -j ${DICT_NAME}.zip -d ${DICT_NAME}
+unzip -j ${DICT_NAME}.zip "*/system_${DICT_TYPE}.dic" -d .
+rm -f ${DICT_NAME}.zip
 
-mkdir -p dict
-mv ${DICT_NAME}/system_${DICT_TYPE}.dic dict/system_core.dic
+# Build dic_converter if not exists
+if [ ! -f ./target/release/dic_converter ]; then
+    echo "Building dic_converter..."
+    cargo build --bin dic_converter --release --manifest-path sudachi-wasm/Cargo.toml
+fi
 
-rm -rf ${DICT_NAME}.zip ${DICT_NAME}
+mv "system_${DICT_TYPE}.dic" "dict/system_core.dic"
 
 echo
-echo "Placed a dictionary file to \`dict/system_core.dic\` ."
+echo "Placed a compressed dictionary file to \`dict/system_core.dic\` ."

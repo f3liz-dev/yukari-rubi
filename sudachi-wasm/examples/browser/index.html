@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sudachi WASM – Browser Demo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
+    h1   { font-size: 1.4rem; }
+    .controls { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+    input[type=text] { flex: 1; font-size: 1rem; padding: .3rem .5rem; }
+    select, button   { font-size: 1rem; padding: .3rem .6rem; }
+    #status { color: #666; font-style: italic; margin-bottom: .4rem; }
+    #progress-wrap { margin-bottom: 1rem; height: 6px; background: #e0e0e0; border-radius: 3px; display: none; }
+    #progress-bar  { height: 100%; width: 0%; background: #4a90d9; border-radius: 3px; transition: width .1s linear; }
+    table   { width: 100%; border-collapse: collapse; }
+    th, td  { border: 1px solid #ccc; padding: .35rem .6rem; text-align: left; }
+    th      { background: #f0f0f0; }
+    .pos    { font-size: .85rem; color: #555; }
+    .oov    { color: #c00; font-weight: bold; }
+    /* Furigana output */
+    #furigana-box {
+      font-size: 1.6rem;
+      line-height: 3;
+      padding: .6rem .8rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fafafa;
+      margin-bottom: 1rem;
+    }
+    #furigana-box ruby { ruby-align: center; }
+    #furigana-box rt   { font-size: .5em; color: #444; }
+    .view-tabs { display: flex; gap: .4rem; margin-bottom: .6rem; }
+    .view-tab {
+      font-size: .9rem; padding: .2rem .8rem; cursor: pointer;
+      border: 1px solid #ccc; border-radius: 4px 4px 0 0;
+      background: #e8e8e8; color: #444;
+    }
+    .view-tab.active { background: #fff; border-bottom-color: #fff; font-weight: bold; color: #000; }
+    #furigana-style { display: none; }
+    .furigana-active #furigana-style { display: inline-block; }
+  </style>
+</head>
+<body>
+  <h1>Sudachi Japanese Morphological Analyzer (WASM)</h1>
+
+  <p id="status">⏳ Loading dictionary…</p>
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+
+  <div class="controls">
+    <input id="text" type="text" value="今日はいい天気ですね。" />
+    <select id="dict" title="Dictionary">
+      <option value="small">Small dict</option>
+      <option value="core" selected>Core dict</option>
+      <option value="full">Full dict</option>
+    </select>
+    <select id="mode" title="Split mode">
+      <option value="C" selected>C – named entity (longest)</option>
+      <option value="B">B – word level</option>
+      <option value="A">A – short units</option>
+    </select>
+    <button id="btn" disabled>Analyze</button>
+  </div>
+
+  <div class="view-tabs" id="view-tabs" hidden>
+    <span class="view-tab active" data-view="furigana">Furigana</span>
+    <span class="view-tab" data-view="table">Morpheme table</span>
+    <select id="furigana-style" title="Furigana display style" style="margin-left:auto;font-size:.85rem;padding:.1rem .4rem;">
+      <option value="ruby">Ruby (HTML)</option>
+      <option value="text">Text: 漢字(よみ)</option>
+    </select>
+  </div>
+
+  <div id="furigana-box" hidden></div>
+
+  <table id="tbl" hidden>
+    <thead>
+      <tr>
+        <th>#</th><th>Surface</th><th>Reading</th>
+        <th>Dictionary form</th><th>Normalized form</th>
+        <th>Part of speech</th><th>Offsets</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script type="module">
+    // wasm-pack build --target web  →  generates ./pkg/sudachi_wasm.js + .wasm
+    import init, { Tokenizer } from "./pkg/sudachi_wasm.js";
+
+    let tokenizer;
+
+    // Cache for already-fetched dictionary bytes: variant → Uint8Array
+    const dictCache = new Map();
+    let loadedDictVariant = null;
+
+    /** Convert katakana string to hiragana (for furigana display).
+     *  Note: Sudachi preserves particle kana as-is (ハ→は, ヘ→へ, ヲ→を),
+     *  so this simple offset correctly round-trips them. */
+    function katakanaToHiragana(str) {
+      return str.replace(/[\u30A1-\u30F6]/g, ch =>
+        String.fromCharCode(ch.charCodeAt(0) - 0x60)
+      );
+    }
+
+    /** Return true if ch is a CJK kanji character (including iteration marks 々〻). */
+    function isKanji(ch) {
+      const c = ch.codePointAt(0);
+      return (c >= 0x3400 && c <= 0x9FFF) || (c >= 0xF900 && c <= 0xFAFF)
+          || c === 0x3005 /* 々 */ || c === 0x303B /* 〻 */;
+    }
+
+    /** Return true if the string contains at least one kanji (CJK) character. */
+    function containsKanji(str) {
+      return [...str].some(isKanji);
+    }
+
+    /** Escape HTML special characters for safe insertion via innerHTML. */
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    /** Escape a string for use as a literal in a RegExp. */
+    function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    /**
+     * Split a surface form into alternating kanji / non-kanji segments.
+     * e.g. "又は" → [{type:"kanji",text:"又"}, {type:"kana",text:"は"}]
+     *      "食べ物" → [{kanji,"食"}, {kana,"べ"}, {kanji,"物"}]
+     */
+    function splitSurface(surface) {
+      const segs = [];
+      let cur = "";
+      let curType = null;
+      for (const ch of surface) {
+        const t = isKanji(ch) ? "kanji" : "kana";
+        if (t !== curType) {
+          if (cur) segs.push({ type: curType, text: cur });
+          cur = ch;
+          curType = t;
+        } else {
+          cur += ch;
+        }
+      }
+      if (cur) segs.push({ type: curType, text: cur });
+      return segs;
+    }
+
+    /**
+     * Align a hiragana reading to the kanji/kana segments of a surface form.
+     *
+     * Strategy:
+     *   - Kana segments act as anchors inside the reading string.
+     *   - We build a regex where each kanji run becomes a capture group (.+?)
+     *     and each kana run becomes a literal match.
+     *   - This handles cases like:
+     *       又は / または  →  又(また)は
+     *       食べ物 / たべもの →  食(た)べ物(もの)
+     *   - The last kanji group (if no kana follows it) is greedy (.+) so
+     *     it consumes the rest of the reading without over-splitting.
+     *
+     * Returns an array of segments with .reading filled in for kanji runs,
+     * or throws AlignmentError when no rule matches.
+     */
+    class AlignmentError extends Error {}
+
+    function alignFurigana(surface, reading) {
+      const segs = splitSurface(surface);
+
+      // No kanji at all — caller should skip furigana entirely
+      if (!segs.some(s => s.type === "kanji")) return null;
+
+      // No kana anchors — whole surface maps to whole reading
+      if (!segs.some(s => s.type === "kana")) {
+        return [{ type: "kanji", text: surface, reading }];
+      }
+
+      // Build a regex using kana runs as literals and kanji runs as captures.
+      // Greedy (.+) for the last kanji group when it has no trailing kana anchor,
+      // non-greedy (.+?) otherwise.
+      let pattern = "^";
+      for (let i = 0; i < segs.length; i++) {
+        const seg = segs[i];
+        if (seg.type === "kanji") {
+          const noKanaAfter = segs.slice(i + 1).every(s => s.type !== "kana");
+          pattern += noKanaAfter ? "(.+)" : "(.+?)";
+        } else {
+          pattern += escapeRegex(seg.text);
+        }
+      }
+      pattern += "$";
+
+      const match = reading.match(new RegExp(pattern));
+      if (!match) {
+        throw new AlignmentError(
+          `Cannot align furigana: surface="${surface}", reading="${reading}"`
+        );
+      }
+
+      let cap = 1;
+      return segs.map(seg =>
+        seg.type === "kanji"
+          ? { type: "kanji", text: seg.text, reading: match[cap++] }
+          : { type: "kana",  text: seg.text }
+      );
+    }
+
+    /** Render pre-aligned segments into HTML or text furigana. */
+    function renderSegments(segs, style) {
+      return segs.map(seg => {
+        if (seg.type === "kanji") {
+          const s = escapeHtml(seg.text);
+          const r = escapeHtml(seg.reading);
+          return style === "ruby"
+            ? `<ruby>${s}<rt>${r}</rt></ruby>`
+            : `${s}(${r})`;
+        }
+        return escapeHtml(seg.text);
+      }).join("");
+    }
+
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg;
+    }
+
+    function setProgress(fraction) {
+      const wrap = document.getElementById("progress-wrap");
+      const bar  = document.getElementById("progress-bar");
+      if (fraction == null) {
+        wrap.style.display = "none";
+        bar.style.width = "0%";
+      } else {
+        wrap.style.display = "block";
+        bar.style.width = `${Math.round(fraction * 100)}%`;
+      }
+    }
+
+    /** Fetch a dictionary variant (cached). Returns Uint8Array. */
+    async function fetchDict(variant) {
+      if (dictCache.has(variant)) return dictCache.get(variant);
+      const filename = `system_${variant}.dic`;
+      const resp = await fetch(filename);
+      if (!resp.ok) throw new Error(`Failed to fetch ${filename}: ${resp.status}`);
+      const total = parseInt(resp.headers.get("content-length") || "0", 10);
+      const reader = resp.body.getReader();
+      const chunks = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        const label = { small: "Small", core: "Core", full: "Full" }[variant];
+        if (total > 0) {
+          const pct = Math.round((received / total) * 100);
+          setStatus(`⏳ Downloading ${label} dictionary… ${pct}%`);
+          setProgress(received / total);
+        } else {
+          setStatus(`⏳ Downloading ${label} dictionary… ${(received / 1048576).toFixed(1)} MB`);
+        }
+      }
+      // Merge chunks into a single Uint8Array
+      const bytes = new Uint8Array(received);
+      let offset = 0;
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+      dictCache.set(variant, bytes);
+      return bytes;
+    }
+
+    /** Load (or switch to) a dictionary variant, rebuilding the tokenizer. */
+    async function loadDict(variant) {
+      if (loadedDictVariant === variant) return;
+      document.getElementById("btn").disabled = true;
+      const label = { small: "Small", core: "Core", full: "Full" }[variant];
+      setStatus(`⏳ Loading ${label} dictionary…`);
+      const bytes = await fetchDict(variant);
+      setStatus(`⏳ Building tokenizer…`);
+      setProgress(null);
+      tokenizer = new Tokenizer(bytes);
+      loadedDictVariant = variant;
+      setStatus(`✅ Ready (${label} dictionary)`);
+      document.getElementById("btn").disabled = false;
+    }
+
+    async function setup() {
+      await init();
+      const initialVariant = document.getElementById("dict").value;
+      await loadDict(initialVariant);
+    }
+
+    // Reload tokenizer when dictionary selector changes
+    function reloadDict() {
+      const variant = document.getElementById("dict").value;
+      loadDict(variant).catch(err => setStatus(`❌ ${err.message}`));
+    }
+    document.getElementById("dict").addEventListener("change", reloadDict);
+
+    // View tab switching
+    let currentView = "furigana";
+    const viewTabs = document.getElementById("view-tabs");
+    viewTabs.classList.add("furigana-active");
+    viewTabs.addEventListener("click", e => {
+      const tab = e.target.closest(".view-tab");
+      if (!tab) return;
+      currentView = tab.dataset.view;
+      document.querySelectorAll(".view-tab").forEach(t =>
+        t.classList.toggle("active", t === tab)
+      );
+      viewTabs.classList.toggle("furigana-active", currentView === "furigana");
+      document.getElementById("furigana-box").hidden = (currentView !== "furigana");
+      document.getElementById("tbl").hidden = (currentView !== "table");
+    });
+
+    // Re-render furigana when style selector changes
+    let lastMorphemes = null;
+    document.getElementById("furigana-style").addEventListener("change", () => {
+      if (lastMorphemes) renderFurigana(lastMorphemes);
+    });
+
+    function renderFurigana(morphemes) {
+      lastMorphemes = morphemes;
+      const style = document.getElementById("furigana-style").value;
+      const alignErrors = [];
+
+      const html = morphemes.map((m) => {
+        const surface = m.surface;
+        const reading = katakanaToHiragana(m.readingForm);
+
+        // No kanji or reading identical to surface — plain text
+        if (!containsKanji(surface) || reading === surface) {
+          return escapeHtml(surface);
+        }
+
+        try {
+          const segs = alignFurigana(surface, reading);
+          return renderSegments(segs, style);
+        } catch (e) {
+          alignErrors.push({ surface, reading });
+          const s = escapeHtml(surface);
+          const r = escapeHtml(reading);
+          return style === "ruby"
+            ? `<ruby>${s}<rt>${r}</rt></ruby>`
+            : `${s}(${r})`;
+        }
+      }).join("");
+
+      document.getElementById("furigana-box").innerHTML = html;
+      document.getElementById("furigana-box").hidden = (currentView !== "furigana");
+
+      if (alignErrors.length > 0) {
+        const detail = alignErrors.map(e => `「${e.surface}」(${e.reading})`).join("、");
+        setStatus(
+          `⚠️ Furigana alignment failed for: ${detail} — ` +
+          `whole-word furigana used as fallback. Please report this to the developer.`
+        );
+        console.warn("[sudachi-wasm] furigana alignment errors:", alignErrors);
+      }
+    }
+
+    function renderTable(morphemes) {
+      const tbody = document.querySelector("#tbl tbody");
+      document.querySelector("#tbl thead tr").innerHTML =
+        "<th>#</th><th>Surface</th><th>Reading</th><th>Dictionary form</th><th>Normalized form</th><th>Part of speech</th><th>Offsets</th>";
+      tbody.innerHTML = "";
+      morphemes.forEach((m, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td><b>${escapeHtml(m.surface)}</b>${m.isOov ? ' <span class="oov">OOV</span>' : ""}</td>
+          <td>${escapeHtml(m.readingForm)}</td>
+          <td>${escapeHtml(m.dictionaryForm)}</td>
+          <td>${escapeHtml(m.normalizedForm)}</td>
+          <td class="pos">${m.partOfSpeech.map(escapeHtml).join(" › ")}</td>
+          <td>[${m.begin}, ${m.end})</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("tbl").hidden = (currentView !== "table");
+    }
+
+    function analyze() {
+      const text = document.getElementById("text").value.trim();
+      const mode = document.getElementById("mode").value;
+      if (!text) return;
+
+      const morphemes = tokenizer.tokenize(text, mode);
+      renderFurigana(morphemes);
+      renderTable(morphemes);
+      document.getElementById("view-tabs").hidden = false;
+    }
+
+    document.getElementById("btn").addEventListener("click", analyze);
+    document.getElementById("text").addEventListener("keydown", e => {
+      if (e.key === "Enter") analyze();
+    });
+
+    setup().catch(err => setStatus(`❌ ${err.message}`));
+  </script>
+</body>
+</html>

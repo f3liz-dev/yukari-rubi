@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "sudachi-wasm",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+authors = ["f3liz-dev <f3liz-dev@proton.me>"]
+version = "0.1.0"
+rust-version = "1.74.1"
+description = "WebAssembly bindings for Sudachi Japanese morphological analyzer"
+readme = "README.md"
+homepage = "https://github.com/f3liz-dev/sudachi-wasm"
+repository = "https://github.com/f3liz-dev/sudachi-wasm"
+license = "Apache-2.0"

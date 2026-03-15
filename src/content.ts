@@ -35,8 +35,27 @@ let processing = false
 
 // --- Tokenization via background ---
 
+async function sendMessageWithRetry(message: any, retries = 5, delay = 500): Promise<any> {
+  // oxlint-disable-next-line fp/no-loop-statements
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await browser.runtime.sendMessage(message)
+    } catch (err) {
+      if (
+        i < retries - 1 &&
+        (err instanceof Error && err.message.includes("Could not establish connection"))
+      ) {
+        console.warn(`[yukari-rubi] Connection failed, retrying (${i + 1}/${retries})...`)
+        await new Promise((r) => setTimeout(r, delay))
+        continue
+      }
+      throw err
+    }
+  }
+}
+
 async function tokenize(text: string): Promise<readonly Morpheme[]> {
-  const response: TokenizeResponse = await browser.runtime.sendMessage({
+  const response: TokenizeResponse = await sendMessageWithRetry({
     type: "tokenize",
     text,
     mode: "A",
@@ -100,12 +119,12 @@ function createRubyFragment(
 async function processTextNode(textNode: Text): Promise<void> {
   const text = textNode.textContent
   if (!text || !containsKanji(text)) return
-  if (!textNode.parentNode) return
+  if (!textNode.parentNode || !textNode.isConnected) return
 
   const morphemes = await tokenize(text)
 
-  // Re-check parent after async call
-  if (!textNode.parentNode) return
+  // Re-check state and node after async call
+  if (!active || !textNode.parentNode || !textNode.isConnected) return
 
   const container = document.createElement("span")
   container.className = CONTAINER_CLASS
@@ -120,7 +139,10 @@ async function processTextNode(textNode: Text): Promise<void> {
     }
   }
 
-  textNode.parentNode.replaceChild(container, textNode)
+  // Double check parent one last time before replacing
+  if (textNode.parentNode) {
+    textNode.parentNode.replaceChild(container, textNode)
+  }
 }
 
 // --- Process all text nodes under root ---
@@ -131,6 +153,7 @@ async function processRoot(root: Node): Promise<void> {
 
   const BATCH = 10
   for (let i = 0; i < textNodes.length; i += BATCH) {
+    if (!active) break
     const batch = textNodes.slice(i, i + BATCH)
     await Promise.all(batch.map(processTextNode))
   }
@@ -157,15 +180,23 @@ function startObserver(): void {
     if (!active) return
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
-        if (node instanceof HTMLElement && !node.classList.contains(CONTAINER_CLASS)) {
-          void processRoot(node)
-        } else if (node instanceof Text && node.textContent && containsKanji(node.textContent)) {
-          void processTextNode(node)
+        try {
+          if (node instanceof HTMLElement && !node.classList.contains(CONTAINER_CLASS)) {
+            void processRoot(node)
+          } else if (node instanceof Text && node.textContent && containsKanji(node.textContent)) {
+            void processTextNode(node)
+          }
+        } catch (e) {
+          // Ignore DeadObject errors from mutations on destroyed/navigated pages
+          if (e instanceof Error && e.message.includes("DeadObject")) continue
+          throw e
         }
       }
     }
   })
-  observer.observe(document.body, { childList: true, subtree: true })
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true })
+  }
 }
 
 function stopObserver(): void {
@@ -183,13 +214,17 @@ async function activate(): Promise<void> {
   processing = true
   try {
     await processRoot(document.body)
-    const settings: SettingsResponse = await browser.runtime.sendMessage({
+    const settings: SettingsResponse = await sendMessageWithRetry({
       type: "getSettings",
     })
     if (settings.mutationObserver) {
       startObserver()
     }
   } catch (err) {
+    // DeadObject errors in Firefox occur when interacting with destroyed context
+    if (err instanceof Error && err.message.includes("DeadObject")) {
+      return
+    }
     console.error("[yukari-rubi] activation error:", err)
   } finally {
     processing = false

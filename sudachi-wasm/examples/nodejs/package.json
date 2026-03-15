@@ -1,0 +1,10 @@
+{
+  "name": "sudachi-wasm-nodejs-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wasm-pack build --target nodejs ../.. && cp /path/to/system_core.dic .",
+    "start": "node main.mjs"
+  }
+}

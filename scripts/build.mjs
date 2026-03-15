@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const dist = join(root, "dist");
 const staticDir = join(root, "static");
-const sudachiPkg = join(root, "wasm", "pkg");
+const sudachiPkg = join(root, "sudachi-wasm", "wasm", "pkg");
 const sudachiDict = join(root, "dict", "system_core.dic");
 
 // Clean

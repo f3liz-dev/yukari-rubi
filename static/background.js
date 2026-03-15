@@ -39,6 +39,16 @@ async function saveDictToIDB(bytes) {
   }
 }
 
+async function clearDictFromIDB() {
+  try {
+    const db = await openDictDB();
+    const tx = db.transaction("dict", "readwrite");
+    tx.objectStore("dict").delete("system_core");
+  } catch (e) {
+    console.warn("[yukari-rubi] Failed to clear dictionary cache:", e);
+  }
+}
+
 // --- Tokenizer lifecycle ---
 
 async function ensureTokenizer() {
@@ -46,6 +56,7 @@ async function ensureTokenizer() {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
+    console.log("[yukari-rubi] Initializing tokenizer...");
     const wasmUrl = browser.runtime.getURL("wasm/sudachi_wasm_bg.wasm");
     await init(wasmUrl);
 
@@ -53,6 +64,7 @@ async function ensureTokenizer() {
     let dictBytes = await loadDictFromIDB();
 
     if (!dictBytes) {
+      console.log("[yukari-rubi] Dictionary not found in cache, fetching from bundled file...");
       // Fall back to bundled dictionary
       const dictUrl = browser.runtime.getURL("dict/system_core.dic");
       const resp = await fetch(dictUrl);
@@ -63,18 +75,36 @@ async function ensureTokenizer() {
       }
       dictBytes = new Uint8Array(await resp.arrayBuffer());
       await saveDictToIDB(dictBytes);
+      console.log("[yukari-rubi] Dictionary cached to IndexedDB.");
+    } else {
+      console.log("[yukari-rubi] Dictionary loaded from IndexedDB cache.");
     }
 
-    tokenizer = new Tokenizer(dictBytes);
+    try {
+      tokenizer = new Tokenizer(dictBytes);
+    } catch (err) {
+      // Dict from cache may be corrupt — clear it and retry with bundled file
+      console.warn("[yukari-rubi] Failed to create Tokenizer (possibly corrupt cache), clearing cache and retrying...", err);
+      await clearDictFromIDB();
+      const dictUrl = browser.runtime.getURL("dict/system_core.dic");
+      const resp = await fetch(dictUrl);
+      if (!resp.ok) {
+        throw new Error(
+          "Dictionary not found. Place system_core.dic in dist/dict/",
+        );
+      }
+      dictBytes = new Uint8Array(await resp.arrayBuffer());
+      await saveDictToIDB(dictBytes);
+      tokenizer = new Tokenizer(dictBytes);
+    }
+    console.log("[yukari-rubi] Tokenizer initialized successfully.");
     return tokenizer;
-  })();
-
-  try {
-    return await initPromise;
-  } catch (err) {
+  })().catch((err) => {
     initPromise = null;
     throw err;
-  }
+  });
+
+  return initPromise;
 }
 
 // --- Default settings ---
@@ -89,7 +119,10 @@ browser.runtime.onInstalled.addListener(() => {
 
 // --- Message handler ---
 
+console.log("[yukari-rubi] Background script loaded and registering message listener.");
+
 browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log("[yukari-rubi] Message received:", message.type);
   if (message.type === "tokenize") {
     ensureTokenizer()
       .then((tok) => ({

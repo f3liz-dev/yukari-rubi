@@ -7,7 +7,9 @@
   "type": "module",
   "scripts": {
     "fetch-dict": "./fetch_dictionary.sh",
-    "build": "node scripts/build.mjs",
+    "build:dic-converter": "cargo build --bin dic_converter --release --manifest-path sudachi-wasm/Cargo.toml",
+    "build:wasm": "wasm-pack build --target web --out-dir wasm/pkg sudachi-wasm/ --release",
+    "build": "npm run build:wasm && node scripts/build.mjs",
     "dev": "npm run build && npx web-ext run --config web-ext.config.mjs",
     "lint": "oxlint",
     "fmt": "oxfmt --write src/",

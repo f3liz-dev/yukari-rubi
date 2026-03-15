@@ -1,0 +1,94 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM
+        run: wasm-pack build --target web --release
+
+      - name: Build tools
+        run: cargo build --bin dic_converter --release
+
+      - name: Download and convert dictionaries
+        run: |
+          for variant in small core full; do
+            echo "════════════════════════════════════════════════════════"
+            echo "  Processing dictionary: ${variant}"
+            echo "════════════════════════════════════════════════════════"
+
+            # Download source dictionary (YADA format)
+            curl -L "https://d2ej7fkh96fzlu.cloudfront.net/sudachidict/sudachi-dictionary-latest-${variant}.zip" \
+              -o dict.zip
+            unzip -j dict.zip "*/system_${variant}.dic" -d .
+
+            # Convert to MARISA format
+            ./target/release/dic_converter \
+              "system_${variant}.dic" \
+              "system_${variant}_marisa.dic"
+
+            # Cleanup intermediates
+            rm -f dict.zip "system_${variant}.dic"
+
+            # Final names
+            mv "system_${variant}_marisa.dic" "system_${variant}.dic"
+          done
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp examples/browser/index.html _site/
+          cp -r pkg _site/pkg
+          cp system_small.dic system_core.dic system_full.dic _site/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

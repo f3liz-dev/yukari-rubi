@@ -2,3 +2,5 @@
 /dist/
 /artifacts/
 *.dic
+/dict/
+/target/

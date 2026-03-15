@@ -1,0 +1,4 @@
+[submodule "sudachi.rs"]
+	path = sudachi.rs
+	url = https://github.com/nyanrus/sudachi.rs
+	branch = feat-marisa
