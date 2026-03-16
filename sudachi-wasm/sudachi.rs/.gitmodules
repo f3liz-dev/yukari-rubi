@@ -1,0 +1,4 @@
+[submodule "rsmarisa"]
+	path = rsmarisa
+	url = https://github.com/nyanrus/rsmarisa
+	branch = wasm

@@ -13,7 +13,7 @@
     "dev": "npm run build && npx web-ext run --config web-ext.config.mjs",
     "lint": "oxlint",
     "fmt": "oxfmt --write src/",
-    "package": "npm run build && npx web-ext build --config web-ext.config.mjs"
+    "package": "npm run fetch-dict && npm run build && npx web-ext build --config web-ext.config.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

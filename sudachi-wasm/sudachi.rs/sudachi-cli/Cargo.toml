@@ -1,0 +1,26 @@
+[package]
+name = "sudachi-cli"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+sudachi = { path = "../sudachi" }
+
+cfg-if = "1.0.0" # MIT/Apache 2.0
+clap = { version = "4.5", features = ["derive"] } # MIT/Apache 2.0
+memmap2 = "0.9" # MIT/Apache 2.0
+
+[[bin]]
+name = "sudachi"
+path = "src/main.rs"
+
+[features]
+# Compile dictionary into executable (specifying dictionary becomes optional)
+bake_dictionary = []
