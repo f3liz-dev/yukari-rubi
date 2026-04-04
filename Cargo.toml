@@ -1,9 +1,0 @@
-[workspace]
-resolver = "2"
-
-[workspace.package]
-edition = "2021"
-authors = ["f3liz-dev <f3liz-dev@proton.me>"]
-version = "0.1.0"
-description = "Add furigana reading aids to Japanese text on web pages"
-license = "Apache-2.0"
