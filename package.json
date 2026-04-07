@@ -6,7 +6,7 @@
   "author": "f3liz-dev",
   "type": "module",
   "scripts": {
-    "fetch-dict": "./fetch_dictionary.sh",
+    "fetch-dict": "node scripts/fetch-dict.mjs",
     "build": "node scripts/build.mjs",
     "build:chrome": "node scripts/build.mjs --chrome",
     "dev": "npm run build && npx web-ext run --config web-ext.config.mjs",
