@@ -61,6 +61,13 @@ for (const file of staticFiles) {
   }
 }
 
+// Copy icons
+const iconsDir = join(staticDir, "icons");
+if (existsSync(iconsDir)) {
+  cpSync(iconsDir, join(dist, "icons"), { recursive: true });
+  console.log("✅ Copied icons");
+}
+
 // Copy manifest
 const manifestSrc = join(
   staticDir,

@@ -214,6 +214,42 @@ createBirpc<BackgroundRPC>(rpcMethods, {
 
 console.log("[yukari-rubi] birpc initialized.")
 
+// --- Icon management ---
+
+const enabledIcon = {
+  16: "icons/kaguyaIcons_enabled_16.png",
+  32: "icons/kaguyaIcons_enabled_32.png",
+  48: "icons/kaguyaIcons_enabled_48.png",
+}
+
+const disabledIcon = {
+  16: "icons/kaguyaIcons_disabled_16.png",
+  32: "icons/kaguyaIcons_disabled_32.png",
+  48: "icons/kaguyaIcons_disabled_48.png",
+}
+
+const browserActionApi = Browser.action ?? Browser.browserAction
+
+function updateIcon(tabId: number, active: boolean): void {
+  const path = active ? enabledIcon : disabledIcon
+  browserActionApi.setIcon({ path, tabId })
+}
+
+// Listen for status changes from content script
+Browser.runtime.onMessage.addListener((message, sender) => {
+  if (message && message.type === "statusChanged" && sender.tab?.id !== undefined) {
+    updateIcon(sender.tab.id, message.active)
+  }
+})
+
+// Sync icon when switching tabs
+Browser.tabs.onActivated.addListener(({ tabId }) => {
+  Browser.tabs.sendMessage(tabId, { type: "getStatus" }).then(
+    (status: { active?: boolean }) => updateIcon(tabId, status?.active ?? false),
+    () => updateIcon(tabId, false),
+  )
+})
+
 // --- Keyboard shortcut ---
 
 Browser.commands.onCommand.addListener((command) => {

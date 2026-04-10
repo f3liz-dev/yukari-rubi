@@ -298,9 +298,14 @@ function stopObserver(): void {
 
 // --- Activate / Deactivate ---
 
+function notifyStatus(): void {
+  Browser.runtime.sendMessage({ type: "statusChanged", active })
+}
+
 async function activate(): Promise<void> {
   console.log("[yukari-rubi] Activating furigana on page:", location.href)
   active = true
+  notifyStatus()
   if (processing) return
   processing = true
   try {
@@ -332,6 +337,7 @@ async function activate(): Promise<void> {
 function deactivate(): void {
   console.log("[yukari-rubi] Deactivating furigana")
   active = false
+  notifyStatus()
   stopObserver()
   removeAnnotations()
 }
