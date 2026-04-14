@@ -1,0 +1,44 @@
+{
+  "extensionName": {
+    "message": "ゆかり ルビ"
+  },
+  "extensionDescription": {
+    "message": "Sudachi形態素解析を使って、ウェブページの日本語テキストにふりがなを追加します"
+  },
+  "statusActive": {
+    "message": "有効"
+  },
+  "statusInactive": {
+    "message": "無効"
+  },
+  "enableFurigana": {
+    "message": "ふりがなを有効にする"
+  },
+  "disableFurigana": {
+    "message": "ふりがなを無効にする"
+  },
+  "watchNewContent": {
+    "message": "新しいコンテンツを監視する"
+  },
+  "rubySize": {
+    "message": "ルビサイズ"
+  },
+  "sizeWarning": {
+    "message": "大きいサイズはレイアウトが崩れる場合があります"
+  },
+  "autoEnableSites": {
+    "message": "自動有効化サイト"
+  },
+  "addCurrentSite": {
+    "message": "このサイトを追加"
+  },
+  "addPattern": {
+    "message": "追加"
+  },
+  "patternHint": {
+    "message": "* = 任意の文字列、** = パス全体"
+  },
+  "shortcutLabel": {
+    "message": "ショートカット"
+  }
+}

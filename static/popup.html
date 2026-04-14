@@ -3,135 +3,215 @@
   <head>
     <meta charset="utf-8" />
     <style>
+      :root {
+        --c-bg: #fefefe;
+        --c-surface: #f5f3f0;
+        --c-border: #e8e4df;
+        --c-border-light: #f0ece8;
+        --c-text: #3d3833;
+        --c-text-soft: #8a8279;
+        --c-text-muted: #b0a99f;
+        --c-accent: #6b8f71;
+        --c-accent-hover: #5a7d60;
+        --c-accent-text: #fff;
+        --c-danger: #c9564b;
+        --c-danger-border: #f0c8c4;
+        --c-warning: #c98a2e;
+        --radius: 8px;
+        --radius-sm: 6px;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        width: 240px;
-        padding: 12px;
-        font-family: system-ui, sans-serif;
-        font-size: 14px;
+        width: 260px;
+        padding: 16px;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        color: var(--c-text);
+        background: var(--c-bg);
         margin: 0;
+        line-height: 1.5;
       }
       h1 {
-        font-size: 16px;
+        font-size: 15px;
+        font-weight: 700;
         margin: 0 0 12px 0;
+        letter-spacing: 0.02em;
       }
+
+      /* Status */
       .status {
         display: flex;
         align-items: center;
         gap: 8px;
         margin-bottom: 12px;
+        padding: 8px 10px;
+        background: var(--c-surface);
+        border-radius: var(--radius);
       }
       .status-dot {
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
-        background: #ccc;
+        background: var(--c-text-muted);
+        transition: background 0.2s ease;
       }
       .status-dot.active {
-        background: #22c55e;
+        background: var(--c-accent);
+        box-shadow: 0 0 0 3px rgba(107, 143, 113, 0.2);
       }
-      button {
+      #status-text {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      /* Toggle button */
+      #toggle-btn {
         width: 100%;
-        padding: 8px 12px;
-        font-size: 14px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background: #f9fafb;
+        padding: 9px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        border: none;
+        border-radius: var(--radius);
+        background: var(--c-accent);
+        color: var(--c-accent-text);
         cursor: pointer;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
+        transition: background 0.15s ease, transform 0.1s ease;
       }
-      button:hover {
-        background: #e5e7eb;
+      #toggle-btn:hover {
+        background: var(--c-accent-hover);
       }
-      button:active {
-        background: #d1d5db;
+      #toggle-btn:active {
+        transform: scale(0.98);
       }
+
+      /* Settings section */
       .settings {
-        border-top: 1px solid #e5e7eb;
-        padding-top: 8px;
+        border-top: 1px solid var(--c-border-light);
+        padding-top: 10px;
         margin-top: 4px;
       }
       label {
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 13px;
+        gap: 7px;
+        font-size: 12.5px;
         cursor: pointer;
+        padding: 2px 0;
+        color: var(--c-text);
       }
-      .shortcut {
-        font-size: 11px;
-        color: #6b7280;
-        margin-top: 8px;
-        text-align: center;
+      label input[type="checkbox"] {
+        accent-color: var(--c-accent);
       }
-      kbd {
-        background: #e5e7eb;
-        padding: 1px 4px;
-        border-radius: 3px;
-        font-size: 11px;
-        font-family: monospace;
-      }
+
+      /* Size control */
       .size-control {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-top: 8px;
+        margin-top: 10px;
       }
       .size-control span.label {
-        font-size: 13px;
+        font-size: 12.5px;
         flex-shrink: 0;
       }
       .size-control button {
-        width: 32px;
-        padding: 4px 0;
-        margin-bottom: 0;
-        font-size: 16px;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        font-size: 15px;
         line-height: 1;
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-sm);
+        background: var(--c-surface);
+        color: var(--c-text);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.12s ease;
+      }
+      .size-control button:hover {
+        background: var(--c-border);
+      }
+      .size-control button:disabled {
+        opacity: 0.35;
+        cursor: default;
       }
       .size-control .size-value {
-        font-size: 13px;
+        font-size: 12.5px;
         min-width: 36px;
         text-align: center;
+        font-variant-numeric: tabular-nums;
       }
       .size-warning {
-        color: #d97706;
+        color: var(--c-warning);
         font-size: 11px;
         margin-top: 4px;
       }
+
+      /* Auto-enable sites */
       .auto-enable {
-        border-top: 1px solid #e5e7eb;
-        padding-top: 8px;
-        margin-top: 8px;
+        border-top: 1px solid var(--c-border-light);
+        padding-top: 10px;
+        margin-top: 10px;
       }
       .auto-enable h2 {
-        font-size: 13px;
-        margin: 0 0 6px 0;
+        font-size: 12.5px;
+        margin: 0 0 8px 0;
         font-weight: 600;
+      }
+      .auto-enable .add-site-btn {
+        width: 100%;
+        padding: 6px 10px;
+        font-size: 12px;
+        margin-bottom: 6px;
+        border: 1px dashed var(--c-border);
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--c-text-soft);
+        cursor: pointer;
+        transition: background 0.12s ease, border-color 0.12s ease;
+      }
+      .auto-enable .add-site-btn:hover {
+        background: var(--c-surface);
+        border-color: var(--c-text-muted);
       }
       .auto-enable .add-row {
         display: flex;
         gap: 4px;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
       }
       .auto-enable input[type="text"] {
         flex: 1;
-        padding: 4px 6px;
+        padding: 5px 8px;
         font-size: 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 4px;
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-sm);
         min-width: 0;
+        background: var(--c-bg);
+        color: var(--c-text);
+        transition: border-color 0.15s ease;
+      }
+      .auto-enable input[type="text"]:focus {
+        outline: none;
+        border-color: var(--c-accent);
       }
       .auto-enable .add-row button {
-        width: auto;
-        padding: 4px 8px;
+        padding: 5px 10px;
         font-size: 12px;
-        margin-bottom: 0;
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-sm);
+        background: var(--c-surface);
+        color: var(--c-text);
+        cursor: pointer;
         flex-shrink: 0;
+        transition: background 0.12s ease;
       }
-      .auto-enable .add-site-btn {
-        width: 100%;
-        padding: 4px 8px;
-        font-size: 12px;
-        margin-bottom: 4px;
+      .auto-enable .add-row button:hover {
+        background: var(--c-border);
       }
       .pattern-list {
         max-height: 120px;
@@ -142,71 +222,99 @@
         align-items: center;
         justify-content: space-between;
         gap: 4px;
-        padding: 3px 0;
+        padding: 4px 0;
         font-size: 11px;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid var(--c-border-light);
       }
       .pattern-item span {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         min-width: 0;
+        color: var(--c-text-soft);
       }
       .pattern-item button {
         width: auto;
-        padding: 1px 6px;
+        padding: 2px 7px;
         font-size: 11px;
-        margin-bottom: 0;
-        color: #dc2626;
-        border-color: #fecaca;
+        border: 1px solid var(--c-danger-border);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--c-danger);
+        cursor: pointer;
         flex-shrink: 0;
+        transition: background 0.12s ease;
+      }
+      .pattern-item button:hover {
+        background: #fef2f2;
       }
       .pattern-hint {
         font-size: 10px;
-        color: #9ca3af;
-        margin-top: 2px;
+        color: var(--c-text-muted);
+        margin-top: 3px;
       }
+
+      /* Shortcut */
+      .shortcut {
+        font-size: 11px;
+        color: var(--c-text-muted);
+        margin-top: 12px;
+        text-align: center;
+      }
+      kbd {
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 10.5px;
+        font-family: ui-monospace, monospace;
+      }
+
+      /* Error */
       .error {
-        color: #dc2626;
+        color: var(--c-danger);
         font-size: 12px;
-        margin-top: 4px;
+        margin-top: 6px;
+        padding: 6px 8px;
+        background: #fef2f2;
+        border-radius: var(--radius-sm);
       }
     </style>
   </head>
   <body>
-    <h1>ゆかり ルビ</h1>
+    <h1 data-i18n="extensionName">Yukari Rubi</h1>
     <div class="status">
       <span class="status-dot" id="dot"></span>
-      <span id="status-text">Inactive</span>
+      <span id="status-text" data-i18n="statusInactive">Inactive</span>
     </div>
-    <button id="toggle-btn">Enable Furigana</button>
+    <button id="toggle-btn" data-i18n="enableFurigana">Enable Furigana</button>
     <div class="settings">
       <label>
         <input type="checkbox" id="mutation-cb" />
-        Watch for new content
+        <span data-i18n="watchNewContent">Watch for new content</span>
       </label>
       <div class="size-control">
-        <span class="label">ルビサイズ</span>
+        <span class="label" data-i18n="rubySize">Ruby size</span>
         <button id="size-dec">−</button>
         <span class="size-value" id="size-value">50%</span>
-        <button id="size-inc">＋</button>
+        <button id="size-inc">+</button>
       </div>
-      <div class="size-warning" id="size-warning" hidden>
-        大きいサイズはレイアウトが崩れる場合があります
+      <div class="size-warning" id="size-warning" hidden data-i18n="sizeWarning">
+        Large sizes may break page layout
       </div>
     </div>
     <div class="auto-enable">
-      <h2>自動有効化サイト</h2>
-      <button class="add-site-btn" id="add-current-site">このサイトを追加</button>
+      <h2 data-i18n="autoEnableSites">Auto-enable sites</h2>
+      <button class="add-site-btn" id="add-current-site" data-i18n="addCurrentSite">Add this site</button>
       <div class="add-row">
         <input type="text" id="pattern-input" placeholder="*://example.com/*" />
-        <button id="add-pattern-btn">追加</button>
+        <button id="add-pattern-btn" data-i18n="addPattern">Add</button>
       </div>
       <div class="pattern-list" id="pattern-list"></div>
-      <div class="pattern-hint">* = 任意の文字列、** = パス全体</div>
+      <div class="pattern-hint" data-i18n="patternHint">* = any string, ** = entire path</div>
     </div>
     <div class="shortcut">
-      Shortcut: <kbd>Alt</kbd>+<kbd>F</kbd>
+      <span data-i18n="shortcutLabel">Shortcut</span>: <kbd>Alt</kbd>+<kbd>F</kbd>
     </div>
     <div class="error" id="error" hidden></div>
     <script src="popup.js"></script>

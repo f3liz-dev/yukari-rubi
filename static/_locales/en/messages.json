@@ -1,0 +1,44 @@
+{
+  "extensionName": {
+    "message": "Yukari Rubi"
+  },
+  "extensionDescription": {
+    "message": "Add furigana reading aids to Japanese text on web pages using Sudachi morphological analysis"
+  },
+  "statusActive": {
+    "message": "Active"
+  },
+  "statusInactive": {
+    "message": "Inactive"
+  },
+  "enableFurigana": {
+    "message": "Enable Furigana"
+  },
+  "disableFurigana": {
+    "message": "Disable Furigana"
+  },
+  "watchNewContent": {
+    "message": "Watch for new content"
+  },
+  "rubySize": {
+    "message": "Ruby size"
+  },
+  "sizeWarning": {
+    "message": "Large sizes may break page layout"
+  },
+  "autoEnableSites": {
+    "message": "Auto-enable sites"
+  },
+  "addCurrentSite": {
+    "message": "Add this site"
+  },
+  "addPattern": {
+    "message": "Add"
+  },
+  "patternHint": {
+    "message": "* = any string, ** = entire path"
+  },
+  "shortcutLabel": {
+    "message": "Shortcut"
+  }
+}

@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { cpSync, mkdirSync, existsSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, existsSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -68,12 +68,22 @@ if (existsSync(iconsDir)) {
   console.log("✅ Copied icons");
 }
 
-// Copy manifest
+// Copy _locales
+const localesDir = join(staticDir, "_locales");
+if (existsSync(localesDir)) {
+  cpSync(localesDir, join(dist, "_locales"), { recursive: true });
+  console.log("✅ Copied _locales");
+}
+
+// Copy manifest (sync version from package.json)
 const manifestSrc = join(
   staticDir,
   isChrome ? "manifest.chrome.json" : "manifest.json",
 );
-cpSync(manifestSrc, join(dist, "manifest.json"));
+const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const manifest = JSON.parse(readFileSync(manifestSrc, "utf8"));
+manifest.version = pkg.version;
+writeFileSync(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
 // Copy WASM files
 if (existsSync(sudachiPkg)) {

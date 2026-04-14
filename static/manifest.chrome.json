@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Yukari Rubi",
-  "version": "0.3.0",
+  "name": "__MSG_extensionName__",
+  "default_locale": "en",
   "icons": {
     "16": "icons/kaguyaIcons_display_16.png",
     "32": "icons/kaguyaIcons_display_32.png",
@@ -9,7 +9,7 @@
     "96": "icons/kaguyaIcons_display_96.png",
     "128": "icons/kaguyaIcons_display_128.png"
   },
-  "description": "Add furigana reading aids to Japanese text on web pages using Sudachi morphological analysis",
+  "description": "__MSG_extensionDescription__",
   "permissions": ["storage", "tabs"],
   "background": {
     "service_worker": "background.js",
